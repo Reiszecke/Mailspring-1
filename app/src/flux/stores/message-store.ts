@@ -271,6 +271,21 @@ class _MessageStore extends MailspringStore {
   _collapseItem(item) {
     delete this._itemsExpanded[item.id];
   }
+  
+  /*
+  
+  This fork is an ugly proof of concept for feature request
+  https://community.getmailspring.com/t/unified-inbox-doesnt-group-conversations-with-the-same-sender-across-mailboxes/380
+  
+  I don't know anything about react and I didn't have the time to read into how the async
+  callbacks relate to each other, nor did I implement a conditional user preference which
+  is why this is pretty ugly. But if it helps a bit making the feature make its way into the 
+  master branch then I'm happy. Usability-wise this implementation is perfect for me,
+  HOWEVER, it overwrites existing methods, doesn't come with tests and works rather static.
+  Also I haven't implemented any visual indicator to what inbox this got sent and what
+  inbox will be used for replying.
+  
+  */
 
   _fetchFromCache(options = null) {
     if (options == null) options = {};
