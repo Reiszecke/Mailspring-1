@@ -9,7 +9,7 @@ import FocusedContentStore from './focused-content-store';
 import * as ExtensionRegistry from '../../registries/extension-registry';
 import electron from 'electron';
 import DatabaseChangeRecord from './database-change-record';
-import { MessageViewExtension } from 'mailspring-exports';
+import { MessageViewExtension, Calendar, SearchQueryParser } from 'mailspring-exports';
 
 const FolderNamesHiddenByDefault = ['spam', 'trash'];
 
@@ -271,7 +271,7 @@ class _MessageStore extends MailspringStore {
   _collapseItem(item) {
     delete this._itemsExpanded[item.id];
   }
-  
+
   /*
   
   This fork is an ugly proof of concept for feature request
@@ -287,6 +287,146 @@ class _MessageStore extends MailspringStore {
   
   */
 
+  ownEmailAddresses = [] //TODO-R at the moment this is empty on first iteration due to async query callback.
+  strangerEmailAddress = ""
+
+  _fetchFromCache(options = null) {
+
+    if (options == null) options = {};
+    if (!this._thread) return;
+
+    var self = this;
+
+    //GETTING OWN EMAILS TO NOT INCLUDE IN QUERY
+
+    const query = DatabaseStore.findAll<Calendar>(Calendar); //TODO-R how else could I get our own email addresses?
+    query.run();
+
+    query.then(function (ownEmailCalendars) {
+
+      /*
+        This bit used to be nicely encapsulated with 5 different functions. Because I don't know how to handle async stuff here
+        it's now this beautiful bowl of spaghetti
+      */
+
+      self.ownEmailAddresses = []
+      for (const [index, cal] of ownEmailCalendars.entries()) {
+        self.ownEmailAddresses.push(cal.name)
+      }
+
+      var strangerEmail = ""
+
+      for (const [index, value] of self._thread.participants.entries()) { //I suppose a some sort of .contains() may have been simpler but at least this is unique 
+        console.log(value)
+
+        var isStrangerEmail = true
+
+        for (const [ownIndex, ownValue] of self.ownEmailAddresses.entries()) {
+          if (value.email == ownValue) {
+            isStrangerEmail = false
+          }
+        }
+        if (isStrangerEmail) {
+          self.strangerEmailAddress = value.email
+          console.log(`has strangerEmail ${self.strangerEmailAddress}`)
+        }
+      }
+
+      self.fetchThreads()
+
+    })
+  }
+
+  fetchThreads() {
+
+    const email = this.strangerEmailAddress
+    if (!email) return;
+    if (email == "") return;
+
+    // There used to be a 1000ms wait here 
+
+    const threads = DatabaseStore.findAll<Thread>(Thread)
+      .structuredSearch(SearchQueryParser.parse(`from:${email}`))
+      .limit(25)//background();
+      .run()
+
+    var self = this
+
+    threads.then(function (foundThreads) {
+      self._fetchFromCachePart2(foundThreads)
+    });
+
+  }
+
+  _fetchFromCachePart2(threads) {
+
+    var messagesToList: Array<Message> = [];
+
+    /*
+      Iterating over each thread getting its message, then pushing each found message to 
+    */
+
+    for (const [index, thread] of threads.entries()) {
+      console.log(thread)
+
+      const query = DatabaseStore.findAll<Message>(Message);
+      query.where({ threadId: thread.id });
+      query.include(Message.attributes.body);
+
+      query.then(items => {
+        console.log(`Query result ${index}`)
+        console.log(items)
+
+
+        //idk why but there were no bodies in the earliest messages. 
+        for (const [itemIndex, message] of items.entries()) {
+          if (message.body) { } else {
+            if (message.snippet) {
+              console.log("can replace body with snippet")
+              message.body = `SNIPPET: ${message.snippet}`
+            } else {
+              console.log("has no snippet. putting placeholder")
+              message.body = "MESSAGE TOO OLD"
+            }
+          }
+          messagesToList.push(message)
+        }
+
+        console.log("itemPile:")
+        console.log(messagesToList)
+
+        this._items = messagesToList.filter(m => !m.isHidden());
+        this._items = this._sortItemsForDisplay(this._items);
+
+        //messages are returned unsorted regarding date, sorting:
+        this._items = this._items.sort((a, b) => (a.date > b.date) ? 1 : -1)
+
+        //below calls in this method were kept unchanged
+
+        this._expandItemsToDefault();
+
+        if (this._itemsLoading) {
+          this._fetchMissingBodies(this._items);
+        }
+
+        // Download the attachments on expanded messages.
+        this._fetchExpandedAttachments(this._items);
+
+        // Normally, we would trigger often and let the view's
+        // shouldComponentUpdate decide whether to re-render, but if we
+        // know we're not ready, don't even bother.  Trigger once at start
+        // and once when ready. Many third-party stores will observe
+        // MessageStore and they'll be stupid and re-render constantly.
+        this._itemsLoading = false;
+        this._markAsRead();
+        this.trigger(this);
+
+      })
+
+    }
+  }
+
+  /* //ORIGINAL FUNCTION:
   _fetchFromCache(options = null) {
     if (options == null) options = {};
     if (!this._thread) return;
@@ -324,6 +464,7 @@ class _MessageStore extends MailspringStore {
       this.trigger(this);
     });
   }
+  */
 
   _fetchMissingBodies(items) {
     const missing = items.filter(i => i.body === null);
