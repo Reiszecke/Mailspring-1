@@ -287,7 +287,7 @@ class _MessageStore extends MailspringStore {
   
   */
 
-  ownEmailAddresses = [] //TODO-R at the moment this is empty on first iteration due to async query callback.
+  ownEmailAddresses = []
   strangerEmailAddress = ""
 
   _fetchFromCache(options = null) {
@@ -301,7 +301,6 @@ class _MessageStore extends MailspringStore {
 
     const query = DatabaseStore.findAll<Calendar>(Calendar); //TODO-R how else could I get our own email addresses?
     query.run();
-
     query.then(function (ownEmailCalendars) {
 
       /*
@@ -314,10 +313,10 @@ class _MessageStore extends MailspringStore {
         self.ownEmailAddresses.push(cal.name)
       }
 
+      //dertermining the other person's email address in an unelegant way. Also doesn't consider multiple 'strangers'
       var strangerEmail = ""
 
       for (const [index, value] of self._thread.participants.entries()) { //I suppose a some sort of .contains() may have been simpler but at least this is unique 
-        console.log(value)
 
         var isStrangerEmail = true
 
@@ -328,7 +327,6 @@ class _MessageStore extends MailspringStore {
         }
         if (isStrangerEmail) {
           self.strangerEmailAddress = value.email
-          console.log(`has strangerEmail ${self.strangerEmailAddress}`)
         }
       }
 
@@ -345,42 +343,36 @@ class _MessageStore extends MailspringStore {
 
     // There used to be a 1000ms wait here 
 
-    const threads = DatabaseStore.findAll<Thread>(Thread)
-      .structuredSearch(SearchQueryParser.parse(`from:${email}`))
-      .limit(25)//background();
-      .run()
-
     var self = this
 
-    threads.then(function (foundThreads) {
-      self._fetchFromCachePart2(foundThreads)
-    });
+    const threads = DatabaseStore.findAll<Thread>(Thread)
+      .structuredSearch(SearchQueryParser.parse(`from:${email}`))
+      .limit(25)
+      //background();
+      .run()
+      .then(function (foundThreads) {
+        self._fetchFromCachePart2(foundThreads)
+      });
 
   }
 
   _fetchFromCachePart2(threads) {
 
-    var messagesToList: Array<Message> = [];
+    var messagesToShow: Array<Message> = [];
 
     /*
-      Iterating over each thread getting its message, then pushing each found message to 
+      Iterating over each thread getting its messages, then pushing each found message to the array
     */
 
     for (const [index, thread] of threads.entries()) {
-      console.log(thread)
 
       const query = DatabaseStore.findAll<Message>(Message);
       query.where({ threadId: thread.id });
       query.include(Message.attributes.body);
-
       query.then(items => {
-        console.log(`Query result ${index}`)
-        console.log(items)
 
-
-        //idk why but there were no bodies in the earliest messages. 
         for (const [itemIndex, message] of items.entries()) {
-          if (message.body) { } else {
+          if (message.body) { } else { //there were no bodies in the earliest messages, adding placeholders
             if (message.snippet) {
               console.log("can replace body with snippet")
               message.body = `SNIPPET: ${message.snippet}`
@@ -389,13 +381,10 @@ class _MessageStore extends MailspringStore {
               message.body = "MESSAGE TOO OLD"
             }
           }
-          messagesToList.push(message)
+          messagesToShow.push(message)
         }
 
-        console.log("itemPile:")
-        console.log(messagesToList)
-
-        this._items = messagesToList.filter(m => !m.isHidden());
+        this._items = messagesToShow.filter(m => !m.isHidden());
         this._items = this._sortItemsForDisplay(this._items);
 
         //messages are returned unsorted regarding date, sorting:
