@@ -384,13 +384,14 @@ class _MessageStore extends MailspringStore {
           messagesToShow.push(message)
         }
 
-        this._items = messagesToShow.filter(m => !m.isHidden());
-        this._items = this._sortItemsForDisplay(this._items);
-
         //messages are returned unsorted regarding date, sorting:
         this._items = this._items.sort((a, b) => (a.date > b.date) ? 1 : -1)
 
+
         //below calls in this method were kept unchanged
+
+        this._items = messagesToShow.filter(m => !m.isHidden());
+        this._items = this._sortItemsForDisplay(this._items);
 
         this._expandItemsToDefault();
 
