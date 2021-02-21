@@ -44,13 +44,21 @@ class FocusedContactStorePropsContainer extends React.Component<
     return <div className={classname}>{inner}</div>;
   }
 }
-
-const SidebarPluginContainerInner = props => {
-  return (
-    <InjectedComponentSet
+/*<InjectedComponentSet
       className="sidebar-contact-card"
       key={props.focusedContact.email}
       matching={{ role: 'MessageListSidebar:ContactCard' }}
+      direction="column"
+      exposedProps={{
+        contact: props.focusedContact,
+      }}
+    />*/
+const SidebarPluginContainerInner = props => {
+  return (
+    <InjectedComponentSet
+      className="sidebar-wild-card"
+      key={props.focusedContact.email}
+      matching={{ role: 'MessageListSidebar:WildCard' }}
       direction="column"
       exposedProps={{
         contact: props.focusedContact,
@@ -81,4 +89,3 @@ export class SidebarPluginContainer extends React.Component {
     );
   }
 }
-//test
