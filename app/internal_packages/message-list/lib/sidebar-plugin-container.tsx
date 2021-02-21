@@ -5,7 +5,7 @@ import { InjectedComponentSet } from 'mailspring-component-kit';
 class FocusedContactStorePropsContainer extends React.Component<
   { children: React.ReactElement<any> },
   { focusedContact: Contact }
-> {
+  > {
   static displayName = 'FocusedContactStorePropsContainer';
 
   unsubscribe: () => void;
@@ -81,3 +81,4 @@ export class SidebarPluginContainer extends React.Component {
     );
   }
 }
+//test
