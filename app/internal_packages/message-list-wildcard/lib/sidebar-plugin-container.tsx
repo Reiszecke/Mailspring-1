@@ -2,11 +2,11 @@ import React from 'react';
 import { PropTypes, FocusedContactsStore, Contact } from 'mailspring-exports';
 import { InjectedComponentSet } from 'mailspring-component-kit';
 
-class FocusedContactStorePropsContainer extends React.Component<
+class XFocusedContactStorePropsContainer extends React.Component<
   { children: React.ReactElement<any> },
   { focusedContact: Contact }
   > {
-  static displayName = 'FocusedContactStorePropsContainer';
+  static displayName = 'XFocusedContactStorePropsContainer';
 
   unsubscribe: () => void;
 
@@ -46,12 +46,17 @@ class FocusedContactStorePropsContainer extends React.Component<
 }
 
 const SidebarPluginContainerInner = props => {
-  console.log("new hash")
+
+  console.log("build with scroll23")
+
+
   return (
+
+
     <InjectedComponentSet
-      className="sidebar-contact-card"
+      className="sidebar-wild-card"
       key={props.focusedContact.email}
-      matching={{ role: 'MessageListSidebar:ContactCard' }}
+      matching={{ role: 'MessageListSidebar:WildCard' }}
       direction="column"
       exposedProps={{
         contact: props.focusedContact,
@@ -76,9 +81,9 @@ export class SidebarPluginContainer extends React.Component {
 
   render() {
     return (
-      <FocusedContactStorePropsContainer>
+      <XFocusedContactStorePropsContainer>
         <SidebarPluginContainerInner />
-      </FocusedContactStorePropsContainer>
+      </XFocusedContactStorePropsContainer>
     );
   }
 }
