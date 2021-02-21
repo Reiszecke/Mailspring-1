@@ -44,17 +44,15 @@ class FocusedContactStorePropsContainer extends React.Component<
     return <div className={classname}>{inner}</div>;
   }
 }
-/*<InjectedComponentSet
-      className="sidebar-contact-card"
-      key={props.focusedContact.email}
-      matching={{ role: 'MessageListSidebar:ContactCard' }}
-      direction="column"
-      exposedProps={{
-        contact: props.focusedContact,
-      }}
-    />*/
+
 const SidebarPluginContainerInner = props => {
+
+  console.log("build with scroll23")
+
+
   return (
+
+
     <InjectedComponentSet
       className="sidebar-wild-card"
       key={props.focusedContact.email}
